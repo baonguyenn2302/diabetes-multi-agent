@@ -31,11 +31,11 @@ htmlcov/
 .ipynb_checkpoints/
 
 # Generated model artifacts
-*.pkl
-*.pickle
+# *.pkl
+# *.pickle
 *.joblib
 *.h5
-*.keras
+# *.keras
 *.pt
 *.pth
 *.onnx
@@ -50,3 +50,6 @@ Thumbs.db
 !.vscode/launch.json
 !.vscode/tasks.json
 !.vscode/settings.json
+
+# Data files
+data/raw/

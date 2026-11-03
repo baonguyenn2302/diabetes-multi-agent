@@ -1,0 +1,105 @@
+{
+  "model_file": "diabetes_mlp.keras",
+  "preprocessor_file": "preprocessor.pkl",
+  "target": "diabetes",
+  "input_fields": [
+    "gender",
+    "smoking_history",
+    "age",
+    "hypertension",
+    "heart_disease",
+    "bmi",
+    "HbA1c_level",
+    "blood_glucose_level"
+  ],
+  "categorical_values": {
+    "gender": [
+      "Female",
+      "Male",
+      "Other"
+    ],
+    "smoking_history": [
+      "No Info",
+      "current",
+      "ever",
+      "former",
+      "never",
+      "not current"
+    ]
+  },
+  "numeric_ranges": {
+    "age": [
+      18.0,
+      80.0
+    ],
+    "hypertension": [
+      0.0,
+      1.0
+    ],
+    "heart_disease": [
+      0.0,
+      1.0
+    ],
+    "bmi": [
+      10.01,
+      91.82
+    ],
+    "HbA1c_level": [
+      3.5,
+      9.0
+    ],
+    "blood_glucose_level": [
+      80.0,
+      300.0
+    ]
+  },
+  "units": {
+    "age": "năm",
+    "bmi": "kg/m2",
+    "HbA1c_level": "%",
+    "blood_glucose_level": "mg/dL",
+    "hypertension": "0/1",
+    "heart_disease": "0/1"
+  },
+  "encoded_features": [
+    "cat__gender_Female",
+    "cat__gender_Male",
+    "cat__gender_Other",
+    "cat__smoking_history_No Info",
+    "cat__smoking_history_current",
+    "cat__smoking_history_ever",
+    "cat__smoking_history_former",
+    "cat__smoking_history_never",
+    "cat__smoking_history_not current",
+    "num__age",
+    "num__hypertension",
+    "num__heart_disease",
+    "num__bmi",
+    "num__HbA1c_level",
+    "num__blood_glucose_level"
+  ],
+  "dataset": {
+    "file": "data/raw/dataset.csv",
+    "rows_used": 82781,
+    "filter": "age >= 18",
+    "source": "CẦN GHI NGUỒN CHÍNH XÁC"
+  },
+  "metrics": {
+    "test_roc_auc": 0.971,
+    "test_precision": 0.507,
+    "test_recall": 0.888,
+    "test_f1": 0.646,
+    "threshold": 0.5
+  },
+  "versions": {
+    "tensorflow": "2.21.0",
+    "scikit_learn": "1.9.1",
+    "python_trained_on": "3.13"
+  },
+  "trained_on": "2026-11-03",
+  "limitations": [
+    "Dữ liệu huấn luyện không đại diện cho mọi nhóm dân cư, bao gồm người Việt Nam.",
+    "Đơn vị các trường số là giả định, chưa được xác nhận từ nguồn dữ liệu.",
+    "Kết quả chỉ là ước tính tham khảo, không phải chẩn đoán y khoa."
+  ]
+}
