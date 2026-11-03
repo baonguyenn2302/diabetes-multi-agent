@@ -52,4 +52,4 @@ Thumbs.db
 !.vscode/settings.json
 
 # Data files
-data/raw/
+# data/raw/
