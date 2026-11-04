@@ -1,10 +1,10 @@
 ---
 source_title: "Quyết định về việc sửa đổi, bổ sung một số nội dung của Hướng dẫn chẩn đoán và điều trị đái tháo đường típ 2 (5481/QĐ-BYT)"
 publisher: "Bộ Y tế Việt Nam"
-issued: "2021 (ngày ký để trống trong bản này)"
+issued: "2021-02-23"
 language: vi
 original_file: "bo_y_te_sua_doi_bo_sung_dtd_tip2_2021.pdf"
-note: "Số quyết định trong bản tải về bị để trống, file gốc đặt tên QD_1353 nhưng chưa xác minh số này. Cần kiểm tra trên cổng Bộ Y tế trước khi trích dẫn số hiệu."
+note: "Quyết định số 1353/QĐ-BYT ngày 23/02/2021, đã đối chiếu với PDF gốc. Sửa đổi điểm b mục 3 trang 37 (PHẦN 5, không được nạp vào ChromaDB)."
 ---
 
 BỘ Y TẾ
