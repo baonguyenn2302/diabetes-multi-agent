@@ -5,24 +5,24 @@ import HealthDataForm from "./components/HealthDataForm";
 import MessageInput from "./components/MessageInput";
 import SafetyBanner from "./components/SafetyBanner";
 
+const RISK_MESSAGE = "Tôi muốn đánh giá nguy cơ tiểu đường";
+
 export default function App() {
   const [mode, setMode] = useState("knowledge");
+  const [sessionId] = useState(() => crypto.randomUUID());
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  async function send(payload, userLabel) {
-    setMessages((prev) => [...prev, { role: "user", text: userLabel }]);
+  async function send({ message, healthData, label }) {
+    setMessages((prev) => [...prev, { role: "user", text: label }]);
     setLoading(true);
     try {
-      const response = await sendChat(payload);
+      const response = await sendChat({ sessionId, message, healthData });
       setMessages((prev) => [...prev, { role: "assistant", response }]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          response: { status: "error", error: { message: err.message } },
-        },
+        { role: "assistant", response: { error: { message: err.message } } },
       ]);
     } finally {
       setLoading(false);
@@ -50,14 +50,20 @@ export default function App() {
 
       {mode === "knowledge" ? (
         <MessageInput
-          onSend={(text) => send({ message: text }, text)}
           disabled={loading}
+          onSend={(text) =>
+            send({ message: text, healthData: null, label: text })
+          }
         />
       ) : (
         <HealthDataForm
           disabled={loading}
           onSubmit={(features) =>
-            send({ features }, "Đánh giá nguy cơ với dữ liệu đã nhập")
+            send({
+              message: RISK_MESSAGE,
+              healthData: features,
+              label: "Đánh giá nguy cơ với dữ liệu đã nhập",
+            })
           }
         />
       )}

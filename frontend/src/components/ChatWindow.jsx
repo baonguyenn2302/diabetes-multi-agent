@@ -1,50 +1,54 @@
+import AgentActivity from "./AgentActivity";
 import SourceList from "./SourceList";
 
+const STATUS_LABELS = {
+  success: "Hoàn tất",
+  needs_input: "Cần bổ sung thông tin",
+  invalid_input: "Dữ liệu không hợp lệ",
+  insufficient_evidence: "Chưa đủ nguồn tin cậy",
+  error: "Lỗi",
+};
+
+// Backend trả error dạng chuỗi (400) hoặc không có error (503);
+// frontend cũng tự tạo { message } khi fetch thất bại. Xử lý cả ba.
+function errorText(error) {
+  if (!error) return null;
+  if (typeof error === "string") return error;
+  return error.message || JSON.stringify(error);
+}
+
 function AssistantBody({ response }) {
-  const { status, result = {}, error } = response;
-
-  if (status === "success" && result.sources) {
-    return (
-      <>
-        <p>Tìm thấy {result.sources.length} nguồn liên quan:</p>
-        <SourceList sources={result.sources} />
-        <small>{result.disclaimer}</small>
-      </>
-    );
-  }
-
-  if (status === "success" && result.probability !== undefined) {
-    return (
-      <>
-        <p>
-          Kết quả ước tính của model: {(result.probability * 100).toFixed(1)}%
-          (ngưỡng {result.threshold}).
-        </p>
-        <ul>
-          {(result.limitations || []).map((l, i) => (
-            <li key={i}>{l}</li>
-          ))}
-        </ul>
-      </>
-    );
-  }
-
-  if (status === "insufficient_evidence") {
-    return <p>{result.message}</p>;
-  }
-
-  if (status === "needs_input") {
-    return (
-      <p>Cần bổ sung thông tin: {(result.missing_fields || []).join(", ")}</p>
-    );
-  }
-
-  if (status === "invalid_input") {
-    return <p>Dữ liệu không hợp lệ: {error?.message}</p>;
-  }
+  const {
+    status,
+    answer,
+    sources,
+    agent_trace,
+    missing_fields,
+    warnings,
+    error,
+  } = response;
+  const err = errorText(error);
 
   return (
-    <p className="error">Đã xảy ra lỗi: {error?.message || "không xác định"}</p>
+    <>
+      {status && status !== "success" && (
+        <p className={`status status-${status}`}>
+          <small>{STATUS_LABELS[status] || status}</small>
+        </p>
+      )}
+      {answer && <p style={{ whiteSpace: "pre-wrap" }}>{answer}</p>}
+      {err && <p className="error">{err}</p>}
+      {missing_fields?.length > 0 && <p>Thiếu: {missing_fields.join(", ")}</p>}
+      {warnings?.length > 0 && (
+        <ul className="warnings">
+          {warnings.map((w, i) => (
+            <li key={i}>{w}</li>
+          ))}
+        </ul>
+      )}
+      <SourceList sources={sources} />
+      <AgentActivity trace={agent_trace} />
+    </>
   );
 }
 

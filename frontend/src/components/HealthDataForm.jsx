@@ -51,14 +51,14 @@ export default function HealthDataForm({ onSubmit, disabled }) {
   function handleSubmit(e) {
     e.preventDefault();
     if (disabled) return;
-    // Gửi chuỗi đã chuyển thành số. Backend vẫn là nơi kiểm tra cuối cùng.
+    const numericKeys = new Set([
+      ...NUMERIC_FIELDS.map((f) => f.key),
+      ...BINARY_FIELDS.map((f) => f.key),
+    ]);
     const features = Object.fromEntries(
       Object.entries(values).map(([k, v]) => [
         k,
-        NUMERIC_FIELDS.some((f) => f.key === k) ||
-        BINARY_FIELDS.some((f) => f.key === k)
-          ? Number(v)
-          : v,
+        numericKeys.has(k) ? Number(v) : v,
       ]),
     );
     onSubmit(features);
