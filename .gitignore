@@ -16,6 +16,7 @@ ENV/
 
 # Build and packaging
 build/
+node_modules/
 dist/
 *.egg-info/
 
