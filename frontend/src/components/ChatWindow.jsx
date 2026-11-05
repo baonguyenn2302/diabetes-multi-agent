@@ -1,66 +1,41 @@
-import SourceList from "./SourceList";
+import SourceList from './SourceList';
+import AgentActivity from './AgentActivity';
 
 function AssistantBody({ response }) {
-  const { status, result = {}, error } = response;
-
-  if (status === "success" && result.sources) {
-    return (
-      <>
-        <p>Tìm thấy {result.sources.length} nguồn liên quan:</p>
-        <SourceList sources={result.sources} />
-        <small>{result.disclaimer}</small>
-      </>
-    );
-  }
-
-  if (status === "success" && result.probability !== undefined) {
-    return (
-      <>
-        <p>
-          Kết quả ước tính của model: {(result.probability * 100).toFixed(1)}%
-          (ngưỡng {result.threshold}).
-        </p>
-        <ul>
-          {(result.limitations || []).map((l, i) => (
-            <li key={i}>{l}</li>
-          ))}
-        </ul>
-      </>
-    );
-  }
-
-  if (status === "insufficient_evidence") {
-    return <p>{result.message}</p>;
-  }
-
-  if (status === "needs_input") {
-    return (
-      <p>Cần bổ sung thông tin: {(result.missing_fields || []).join(", ")}</p>
-    );
-  }
-
-  if (status === "invalid_input") {
-    return <p>Dữ liệu không hợp lệ: {error?.message}</p>;
-  }
-
+  const status = response?.status || 'error';
+  const errorMessage = typeof response?.error === 'string'
+    ? response.error : response?.error?.message;
+  const answer = response?.answer || (status === 'error' ? errorMessage : '') || 'Chưa có nội dung phản hồi.';
+  const sources = Array.isArray(response?.sources) ? response.sources : [];
+  const warnings = Array.isArray(response?.warnings) ? response.warnings : [];
+  const missingFields = Array.isArray(response?.missing_fields) ? response.missing_fields : [];
+  const trace = Array.isArray(response?.agent_trace) ? response.agent_trace : [];
   return (
-    <p className="error">Đã xảy ra lỗi: {error?.message || "không xác định"}</p>
+    <div className="assistant-content">
+      <span className={`status-tag status-${status}`}>{status}</span>
+      <p className="answer-text">{answer}</p>
+      {missingFields.length > 0 && <p className="help-text">Trường cần bổ sung: {missingFields.join(', ')}</p>}
+      {warnings.length > 0 && (
+        <div className="warnings" role="note">
+          {warnings.map((w, i) => <p key={i}>{w}</p>)}
+        </div>
+      )}
+      <SourceList sources={sources} />
+      <AgentActivity events={trace} />
+    </div>
   );
 }
 
 export default function ChatWindow({ messages, loading }) {
   return (
-    <div className="chat-window">
+    <div className="chat-window" aria-live="polite">
+      {messages.length === 0 && <p className="empty-chat">Chọn chế độ và đặt câu hỏi để bắt đầu demo.</p>}
       {messages.map((m, i) => (
-        <div key={i} className={`message ${m.role}`}>
-          {m.role === "user" ? (
-            <p>{m.text}</p>
-          ) : (
-            <AssistantBody response={m.response} />
-          )}
+        <div key={m.id || i} className={`message ${m.role}`}>
+          {m.role === 'user' ? <p>{m.text}</p> : <AssistantBody response={m.response} />}
         </div>
       ))}
-      {loading && <p className="loading">Đang xử lý...</p>}
+      {loading && <p className="loading">Đang xử lý qua hệ thống Agent...</p>}
     </div>
   );
 }

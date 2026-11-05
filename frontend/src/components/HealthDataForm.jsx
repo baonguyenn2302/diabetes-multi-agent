@@ -14,7 +14,7 @@ const CATEGORY_OPTIONS = {
 
 const NUMERIC_FIELDS = [
   { key: "age", label: "Tuổi (năm)", min: 18, max: 80, step: 1 },
-  { key: "bmi", label: "BMI (kg/m²)", min: 10.01, max: 91.82, step: 0.1 },
+  { key: "bmi", label: "BMI (kg/m²)", min: 10.01, max: 91.82, step: 0.01 },
   { key: "HbA1c_level", label: "HbA1c (%)", min: 3.5, max: 9.0, step: 0.1 },
   {
     key: "blood_glucose_level",
@@ -56,7 +56,7 @@ export default function HealthDataForm({ onSubmit, disabled }) {
       Object.entries(values).map(([k, v]) => [
         k,
         NUMERIC_FIELDS.some((f) => f.key === k) ||
-        BINARY_FIELDS.some((f) => f.key === k)
+          BINARY_FIELDS.some((f) => f.key === k)
           ? Number(v)
           : v,
       ]),

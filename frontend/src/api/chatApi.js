@@ -1,53 +1,41 @@
-import {
-  riskSuccess,
-  riskNeedsInput,
-  knowledgeSuccess,
-  knowledgeInsufficient,
-  serviceError,
-} from "../mocks/sampleResponses";
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000').replace(/\/$/, '');
 
-const USE_MOCK = import.meta.env.VITE_USE_MOCK !== "false";
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-
-// Hình dạng payload này là tạm thời, sẽ chỉnh theo docs/agent_contracts.md.
-// payload = { message: "câu hỏi" }            -> hỏi kiến thức
-// payload = { features: { ...8 trường... } }  -> đánh giá nguy cơ
-export async function sendChat(payload) {
-  if (USE_MOCK) {
-    return mockChat(payload);
+async function apiRequest(path, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120000);
+  try {
+    const response = await fetch(`${BASE_URL}${path}`, { ...options, signal: controller.signal });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      const detail = typeof data?.error === 'string' ? data.error : data?.error?.message;
+      throw new Error(detail || data?.answer || `Backend trả về HTTP ${response.status}`);
+    }
+    if (!data || typeof data !== 'object') throw new Error('Backend trả phản hồi JSON không hợp lệ');
+    return data;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Yêu cầu quá thời gian chờ (120 giây). Kiểm tra Ollama và Flask.', {
+        cause: error,
+      });
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-  const res = await fetch(`${BASE_URL}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    throw new Error(`Backend trả về HTTP ${res.status}`);
-  }
-  return res.json();
 }
 
-async function mockChat(payload) {
-  // Giả lập độ trễ mạng để kiểm tra trạng thái loading
-  await new Promise((resolve) => setTimeout(resolve, 400));
+export function sendChat({ session_id, message, health_data = null }) {
+  return apiRequest('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({ session_id, message, health_data }),
+  });
+}
 
-  if (payload.features) {
-    const missing = Object.entries(payload.features)
-      .filter(([, v]) => v === "" || v === null || v === undefined)
-      .map(([k]) => k);
-    if (missing.length > 0) {
-      return { ...riskNeedsInput, result: { missing_fields: missing, errors: {} } };
-    }
-    return riskSuccess;
-  }
+export function fetchHistory(sessionId, limit = 20) {
+  return apiRequest(`/api/history?session_id=${encodeURIComponent(sessionId)}&limit=${limit}`);
+}
 
-  const text = (payload.message || "").toLowerCase();
-  if (text.includes("lỗi")) {
-    return serviceError;
-  }
-  const outOfScope = ["phở", "thời tiết", "bánh mì", "bake", "giá vàng"];
-  if (outOfScope.some((kw) => text.includes(kw))) {
-    return knowledgeInsufficient;
-  }
-  return knowledgeSuccess;
+export function fetchHealth() {
+  return apiRequest('/api/health');
 }

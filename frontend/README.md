@@ -1,16 +1,26 @@
-# React + Vite
+# Diabetes AI – React Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Giao diện demo React + Vite kết nối Flask Coordinator API.
 
-Currently, two official plugins are available:
+## Chạy trên Windows 11
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Yêu cầu Node.js hỗ trợ Vite 8 (Node 20.19+ hoặc 22.12+). Backend Flask phải chạy ở http://127.0.0.1:5000.
 
-## React Compiler
+```powershell
+cd frontend
+npm ci
+Copy-Item .env.example .env.local
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Mở địa chỉ được Vite hiển thị (thường http://localhost:5173).
 
-## Expanding the ESLint configuration
+## API
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `POST /api/chat` body `{ session_id, message, health_data }`; `health_data` bằng `null` khi hỏi kiến thức, hoặc object 8 feature khi đánh giá nguy cơ.
+- `GET /api/history?session_id=...` đọc lịch sử đã lưu SQLite.
+- `GET /api/health` kiểm tra backend.
+
+Frontend hiển thị `answer`, `status`, `agent_trace`, `sources`, `warnings` và `missing_fields` của Coordinator response. Không sử dụng mock trong phiên bản tích hợp. Nút **Phiên mới** tạo session ID mới. Session ID được lưu trong sessionStorage, nên làm mới trang trong cùng tab vẫn truy xuất lại được lịch sử của phiên hiện tại. Dùng nút **Tải lịch sử** để hiển thị lại hội thoại; **Phiên mới** tạo mã mới.
+
+Chỉ sử dụng dữ liệu giả lập, không nhập thông tin sức khỏe cá nhân.
