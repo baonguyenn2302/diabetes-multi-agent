@@ -50,6 +50,9 @@ class OllamaService:
         if not excerpts:
             raise ValueError('Không có nguồn; không cho LLM tự tạo lời tư vấn')
         system = (PROMPTS_DIR / 'answer_prompt.txt').read_text(encoding='utf-8')
-        passages = [{'title': e.get('source_title', ''), 'excerpt': e.get('excerpt', '')[:400]} for e in excerpts[:4]]
+        passages = [{
+            'title': e.get('source_title', ''),
+            'excerpt': (e.get('full_text') or e.get('excerpt') or '')[:1500],
+        } for e in excerpts[:4]]
         prompt = json.dumps({'question': question[:2000], 'prediction_summary': prediction_text[:1000], 'sources': passages}, ensure_ascii=False)
         return self.generate(prompt, system=system)

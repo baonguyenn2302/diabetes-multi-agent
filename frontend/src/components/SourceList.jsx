@@ -1,18 +1,35 @@
+const ORIGIN_LABELS = {
+  chroma: "Tài liệu",
+  neo4j: "Đồ thị tri thức (Neo4j)",
+};
+
 export default function SourceList({ sources }) {
-  if (!Array.isArray(sources) || sources.length === 0) return null;
+  if (!sources || sources.length === 0) return null;
+
   return (
-    <details className="sources-panel">
-      <summary>Nguồn tham khảo ({sources.length})</summary>
-      <ul className="sources">
-        {sources.map((source, i) => (
-          <li key={`${source.source_id || 'source'}-${i}`}>
-            <strong>{source.source_title || 'Tài liệu chưa có tiêu đề'}</strong>
-            {source.section && <span> — {source.section}</span>}
-            {source.url && <span> (<a href={source.url} target="_blank" rel="noopener noreferrer">Xem nguồn</a>)</span>}
-            {source.excerpt && <blockquote>{source.excerpt}</blockquote>}
-          </li>
-        ))}
-      </ul>
-    </details>
+    <ul className="sources">
+      {sources.map((s, i) => (
+        <li key={`${s.origin || "src"}-${s.source_id}-${i}`}>
+          {s.origin && (
+            <small className={`origin origin-${s.origin}`}>
+              [{ORIGIN_LABELS[s.origin] || s.origin}]
+            </small>
+          )}{" "}
+          <strong>{s.source_title || s.source_id || "Nguồn"}</strong>
+          {s.section && <span> — {s.section}</span>}
+          {s.url && (
+            <span>
+              {" "}
+              (
+              <a href={s.url} target="_blank" rel="noreferrer">
+                nguồn
+              </a>
+              )
+            </span>
+          )}
+          {s.excerpt && <blockquote>{s.excerpt}</blockquote>}
+        </li>
+      ))}
+    </ul>
   );
 }

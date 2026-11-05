@@ -5,6 +5,20 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+def _load_dotenv(path: Path) -> None:
+    """Đọc KEY=VALUE từ .env vào os.environ. Không ghi đè biến đã có trong shell."""
+    if not path.is_file():
+        return
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_dotenv(REPO_ROOT / ".env")
+
 class Config:
     JSON_AS_ASCII = False
     MAX_CONTENT_LENGTH = 64 * 1024

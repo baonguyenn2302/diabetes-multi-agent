@@ -1,18 +1,19 @@
-"""Medical Knowledge Agent: truy xuất đoạn tri thức có nguồn từ ChromaDB.
+"""Medical Knowledge Agent: truy xuất đoạn tri thức có nguồn từ ChromaDB và Neo4j.
 
-Agent không tự sinh câu trả lời. Nó trả về các đoạn gốc kèm nguồn để tầng
-tổng hợp trình bày. Nếu không có đoạn đủ liên quan, trả về insufficient_evidence.
+Agent không tự sinh câu trả lời. Nếu Neo4j chưa cấu hình hoặc không khả dụng,
+agent vẫn chạy bằng ChromaDB và ghi cảnh báo; không giả vờ đã truy vấn đồ thị.
 """
 from __future__ import annotations
 
 from typing import Any
 
 from services.chroma_service import KnowledgeStore, KnowledgeUnavailableError
+from services.graph_knowledge import lookup_symptoms
+from services.neo4j_service import Neo4jService, Neo4jUnavailableError
 
 AGENT_NAME = "medical_knowledge_agent"
 
-# Khoảng cách cosine tối đa để coi một đoạn là liên quan.
-# Giá trị tạm thời, sẽ hiệu chỉnh lại sau khi có bộ câu hỏi kiểm thử.
+# Khoảng cách cosine tối đa để coi một đoạn là liên quan (hiệu chỉnh trên bộ câu hỏi thử).
 MAX_DISTANCE = 0.50
 TOP_K = 4
 EXCERPT_CHARS = 400
@@ -26,13 +27,20 @@ STATUS_SUCCESS = "success"
 STATUS_INSUFFICIENT = "insufficient_evidence"
 STATUS_ERROR = "error"
 
+EXCERPT_CHARS = 400
+# Nội dung đầy đủ đưa cho LLM tổng hợp. Chunk tối đa khoảng 900 ký tự + tiêu đề,
+# nhưng một đoạn văn dài hơn vẫn không bị cắt khi chunk, nên dùng ngưỡng rộng hơn.
+MAX_CONTEXT_CHARS = 1500
+
 
 class MedicalKnowledgeAgent:
     name = AGENT_NAME
 
-    def __init__(self, store: Any | None = None, max_distance: float = MAX_DISTANCE):
+    def __init__(self, store: Any | None = None, max_distance: float = MAX_DISTANCE,
+                 graph: Neo4jService | None = None):
         self.store = store if store is not None else KnowledgeStore()
         self.max_distance = max_distance
+        self.graph = graph if graph is not None else Neo4jService()
 
     def run(self, task: dict[str, Any]) -> dict[str, Any]:
         session_id = task.get("session_id")
@@ -59,35 +67,62 @@ class MedicalKnowledgeAgent:
             })
 
         relevant = [h for h in hits if h["distance"] <= self.max_distance]
+        sources = [self._vector_source(h) for h in relevant]
+        graph_sources, warnings = self._graph_sources(question)
+        sources += graph_sources
 
-        if not relevant:
+        if not sources:
             return self._build(session_id, task_id, STATUS_INSUFFICIENT, result={
                 "message": "Không tìm thấy tài liệu đủ liên quan đến câu hỏi trong kho tri thức.",
                 "best_distance": round(hits[0]["distance"], 3) if hits else None,
                 "max_distance": self.max_distance,
                 "sources": [],
+                "warnings": warnings,
                 "disclaimer": DISCLAIMER,
             })
 
-        sources = [
-            {
-                "source_id": h.get("source_id", ""),
-                "source_title": h.get("source_title", ""),
-                "publisher": h.get("publisher", ""),
-                "date": h.get("date", ""),
-                "url": h.get("url", ""),
-                "section": h.get("section", ""),
-                "subsection": h.get("subsection", ""),
-                "distance": round(h["distance"], 3),
-                "excerpt": h["document"][:EXCERPT_CHARS],
-            }
-            for h in relevant
-        ]
         return self._build(session_id, task_id, STATUS_SUCCESS, result={
             "sources": sources,
             "max_distance": self.max_distance,
+            "warnings": warnings,
             "disclaimer": DISCLAIMER,
         })
+
+    @staticmethod
+    def _vector_source(h: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "origin": "chroma",
+            "source_id": h.get("source_id", ""),
+            "source_title": h.get("source_title", ""),
+            "publisher": h.get("publisher", ""),
+            "date": h.get("date", ""),
+            "url": h.get("url", ""),
+            "section": h.get("section", ""),
+            "subsection": h.get("subsection", ""),
+            "distance": round(h["distance"], 3),
+            "excerpt": h["document"][:EXCERPT_CHARS],
+        }
+
+    def _graph_sources(self, question: str) -> tuple[list[dict[str, Any]], list[str]]:
+        if not self.graph.configured:
+            return [], []  # chưa cấu hình Neo4j: không cảnh báo để tránh nhiễu
+        try:
+            rows = lookup_symptoms(self.graph, question)
+        except Neo4jUnavailableError as exc:
+            return [], [f"Neo4j không khả dụng, chỉ dùng ChromaDB: {exc}"]
+        sources = [{
+            "origin": "neo4j",
+            "source_id": r["source_id"],
+            "source_title": r["source_title"],
+            "publisher": "",
+            "date": "",
+            "url": "",
+            "section": r["section"],
+            "subsection": "",
+            "distance": None,
+            "excerpt": f"Đái tháo đường típ 2 có triệu chứng: {r['name']} ({r['evidence']})",
+        } for r in rows]
+        return sources, []
 
     def _build(self, session_id, task_id, status, result=None, error=None) -> dict[str, Any]:
         return {
