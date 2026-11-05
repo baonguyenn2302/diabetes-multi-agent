@@ -101,6 +101,7 @@ class MedicalKnowledgeAgent:
             "subsection": h.get("subsection", ""),
             "distance": round(h["distance"], 3),
             "excerpt": h["document"][:EXCERPT_CHARS],
+            "full_text": h["document"][:MAX_CONTEXT_CHARS],
         }
 
     def _graph_sources(self, question: str) -> tuple[list[dict[str, Any]], list[str]]:
