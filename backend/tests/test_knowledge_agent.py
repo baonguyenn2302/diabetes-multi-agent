@@ -42,8 +42,11 @@ def test_success_keeps_only_relevant_hits():
     out = agent.run(make_task("triệu chứng"))
     assert out["status"] == STATUS_SUCCESS
     sources = out["result"]["sources"]
-    assert len(sources) == 2
-    assert all(s["distance"] <= 0.40 for s in sources)
+    vector_sources = [source for source in sources if source["origin"] == "chroma"]
+    graph_sources = [source for source in sources if source["origin"] == "graph_csv"]
+    assert len(vector_sources) == 2
+    assert all(source["distance"] <= 0.40 for source in vector_sources)
+    assert len(graph_sources) == 4
 
 
 def test_success_includes_citation_fields():

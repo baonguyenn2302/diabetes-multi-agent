@@ -58,7 +58,8 @@ def test_graph_unavailable_keeps_chroma_and_warns():
                                   graph=FakeGraph(exc=Neo4jUnavailableError("down")))
     out = agent.run(task("triệu chứng"))
     assert out["status"] == STATUS_SUCCESS
-    assert len(out["result"]["sources"]) == 1
+    assert len(out["result"]["sources"]) == 5
+    assert {s["origin"] for s in out["result"]["sources"]} == {"chroma", "graph_csv"}
     assert any("Neo4j không khả dụng" in w for w in out["result"]["warnings"])
 
 
@@ -66,3 +67,12 @@ def test_graph_not_configured_adds_no_warning():
     agent = MedicalKnowledgeAgent(FakeStore([hit(0.2)]), graph=FakeGraph(configured=False))
     out = agent.run(task("triệu chứng"))
     assert out["result"]["warnings"] == []
+
+
+def test_graph_not_configured_uses_local_triples_with_accurate_origin():
+    agent = MedicalKnowledgeAgent(FakeStore([hit(0.2)]), graph=FakeGraph(configured=False))
+
+    out = agent.run(task("triệu chứng đái tháo đường"))
+
+    graph_sources = [s for s in out["result"]["sources"] if s["origin"] == "graph_csv"]
+    assert [s["symptom"] for s in graph_sources] == ["khát nhiều", "tiểu nhiều", "mờ mắt", "mệt mỏi"]

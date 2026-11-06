@@ -106,6 +106,22 @@ class CoordinatorIntegrationTests(unittest.TestCase):
         self.assertEqual([x["status"] for x in result["agent_trace"] if x["agent"] == "medical_advisor_agent"],
                          ["running", "success"])
 
+    def test_symptoms_use_structured_graph_terms_instead_of_llm_translation(self):
+        knowledge = FakeAgent("medical_knowledge_agent", {"sources": [
+            {"origin": "graph_csv", "symptom": "khát nhiều", "excerpt": "feeling very thirsty"},
+            {"origin": "graph_csv", "symptom": "tiểu nhiều", "excerpt": "needing to urinate more often"},
+            {"origin": "graph_csv", "symptom": "mờ mắt", "excerpt": "blurred vision"},
+            {"origin": "graph_csv", "symptom": "mệt mỏi", "excerpt": "feeling tired"},
+        ]})
+        agents = {**self.agents, "medical_knowledge_agent": knowledge}
+        result = Coordinator(
+            agents, self.meta, ollama=FakeOllama("Thirst (thèm nước), mắt phớt")
+        ).run("Các triệu chứng thường gặp của đái tháo đường là gì?")
+
+        self.assertIn("mờ mắt", result["answer"])
+        self.assertNotIn("mắt phớt", result["answer"].casefold())
+        self.assertNotIn("Thirst", result["answer"])
+
     def test_unsafe_llm_answer_is_replaced(self):
         result = Coordinator(self.agents, self.meta, ollama=FakeOllama("Bạn chắc chắn mắc bệnh tiểu đường.")).run(
             "Tôi khát nước và đi tiểu nhiều")

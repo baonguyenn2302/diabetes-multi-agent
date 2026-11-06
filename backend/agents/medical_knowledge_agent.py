@@ -1,14 +1,15 @@
 """Medical Knowledge Agent: truy xuất đoạn tri thức có nguồn từ ChromaDB và Neo4j.
 
-Agent không tự sinh câu trả lời. Nếu Neo4j chưa cấu hình hoặc không khả dụng,
-agent vẫn chạy bằng ChromaDB và ghi cảnh báo; không giả vờ đã truy vấn đồ thị.
+Agent không tự sinh câu trả lời. Khi Neo4j chưa cấu hình hoặc không khả dụng,
+Agent dùng triples.csv đã kiểm tra trong repository và ghi đúng nguồn dữ liệu.
 """
 from __future__ import annotations
 
+import csv
 from typing import Any
 
 from services.chroma_service import KnowledgeStore, KnowledgeUnavailableError
-from services.graph_knowledge import lookup_symptoms
+from services.graph_knowledge import lookup_local_symptoms, lookup_symptoms
 from services.neo4j_service import Neo4jService, Neo4jUnavailableError
 
 AGENT_NAME = "medical_knowledge_agent"
@@ -105,14 +106,28 @@ class MedicalKnowledgeAgent:
         }
 
     def _graph_sources(self, question: str) -> tuple[list[dict[str, Any]], list[str]]:
-        if not self.graph.configured:
-            return [], []  # chưa cấu hình Neo4j: không cảnh báo để tránh nhiễu
+        warnings: list[str] = []
+        if self.graph.configured:
+            try:
+                rows = lookup_symptoms(self.graph, question)
+            except Neo4jUnavailableError as exc:
+                warnings.append(f"Neo4j không khả dụng, dùng triples.csv: {exc}")
+            else:
+                if rows:
+                    return self._format_graph_sources(rows, "neo4j"), warnings
+
         try:
-            rows = lookup_symptoms(self.graph, question)
-        except Neo4jUnavailableError as exc:
-            return [], [f"Neo4j không khả dụng, chỉ dùng ChromaDB: {exc}"]
+            rows = lookup_local_symptoms(question)
+        except (OSError, csv.Error) as exc:
+            warnings.append(f"Không đọc được kho triệu chứng triples.csv: {exc}")
+            return [], warnings
+        return self._format_graph_sources(rows, "graph_csv"), warnings
+
+    @staticmethod
+    def _format_graph_sources(rows: list[dict[str, Any]], origin: str) -> list[dict[str, Any]]:
         sources = [{
-            "origin": "neo4j",
+            "origin": origin,
+            "symptom": r["name"],
             "source_id": r["source_id"],
             "source_title": r["source_title"],
             "publisher": "",
@@ -123,7 +138,7 @@ class MedicalKnowledgeAgent:
             "distance": None,
             "excerpt": f"Đái tháo đường típ 2 có triệu chứng: {r['name']} ({r['evidence']})",
         } for r in rows]
-        return sources, []
+        return sources
 
     def _build(self, session_id, task_id, status, result=None, error=None) -> dict[str, Any]:
         return {

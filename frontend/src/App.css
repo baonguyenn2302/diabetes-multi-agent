@@ -318,3 +318,8 @@ footer {
   background: #3a3a3a;
   color: #fff;
 }
+
+.status-safety_alert {
+  background: #b00020;
+  color: #fff;
+}

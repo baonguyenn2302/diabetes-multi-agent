@@ -1,6 +1,8 @@
 """Rule-based Coordinator MVP: no fabricated predictions, source citations or traces."""
 from __future__ import annotations
 
+from validators.safety_triage import triage
+
 import json
 from pathlib import Path
 from uuid import uuid4
@@ -74,6 +76,12 @@ class Coordinator:
     def run(self, message, health_data=None, session_id=None):
         session_id = session_id or str(uuid4())
         trace, sources, warnings = [], [], [DISCLAIMER]
+        alert = triage(message) if isinstance(message, str) else None
+        if alert:
+            trace.append({"agent": "coordinator", "status": "success",
+                          "message": f"Luật an toàn: {alert['level']}"})
+            return self._finish(session_id, "safety", alert["message"], trace, sources,
+                                warnings, "safety_alert")
         if not isinstance(message, str) or not message.strip():
             return {"session_id": session_id, "answer": "Vui lòng nhập câu hỏi.",
                     "intent": "invalid", "agent_trace": trace, "sources": sources,
@@ -104,16 +112,26 @@ class Coordinator:
         else:
             intro = ""
         knowledge = self._invoke("medical_knowledge_agent", "retrieve_medical_knowledge", {"question": message}, session_id, trace)
+        graph_symptoms = list(dict.fromkeys(
+            source["symptom"]
+            for source in (knowledge.get("result") or {}).get("sources", [])
+            if isinstance(source, dict)
+            and source.get("origin") in ("neo4j", "graph_csv")
+            and isinstance(source.get("symptom"), str)
+        )) if knowledge["status"] == "success" else []
         if knowledge["status"] == "success":
             sources = (knowledge.get("result") or {}).get("sources", [])
-            # Only source-grounded excerpts; LLM summarization is added in Step 2.
-            snippets = [s.get("excerpt", "")[:220] for s in sources[:2] if isinstance(s, dict) and s.get("excerpt")]
-            explanation = "Trích đoạn nguồn tham khảo: " + " | ".join(snippets) if snippets else "Đã truy xuất nguồn nhưng chưa có trích đoạn để hiển thị."
+            if intent == "symptoms" and graph_symptoms:
+                explanation = "Nguồn tri thức ghi nhận các biểu hiện: " + ", ".join(graph_symptoms) + "."
+            else:
+                # Only source-grounded excerpts; LLM summarization is added in Step 2.
+                snippets = [s.get("excerpt", "")[:400] for s in sources[:4] if isinstance(s, dict) and s.get("excerpt")]
+                explanation = "Trích đoạn nguồn tham khảo: " + " | ".join(snippets) if snippets else "Đã truy xuất nguồn nhưng chưa có trích đoạn để hiển thị."
         else:
             explanation = "Kho tri thức chưa cung cấp được thông tin phù hợp."
             warnings.append(self._error_text(knowledge))
         # A local LLM may rephrase source-grounded text, but must never invent sources.
-        if knowledge["status"] == "success" and sources:
+        if knowledge["status"] == "success" and sources and not (intent == "symptoms" and graph_symptoms):
             try:
                 service = self.ollama
                 if service is None:
@@ -126,6 +144,8 @@ class Coordinator:
             except Exception as exc:
                 warnings.append("Ollama không khả dụng; hiển thị trích đoạn gốc: " + str(exc))
                 trace.append({"agent": "coordinator", "status": "error", "message": "Không thể tổng hợp bằng Ollama; sử dụng trích đoạn nguồn"})
+        elif intent == "symptoms" and graph_symptoms:
+            trace.append({"agent": "coordinator", "status": "success", "message": "Tổng hợp triệu chứng từ dữ liệu đồ thị có cấu trúc"})
         draft = (intro + " " + explanation).strip()
         answer = draft
         if intent in ("risk", "symptoms"):
