@@ -1,0 +1,311 @@
+{
+  "generated_at": "2026-11-12T23:39:22",
+  "model": {
+    "metrics": {
+      "tp": 905,
+      "fp": 65,
+      "tn": 13085,
+      "fn": 367,
+      "accuracy": 0.97,
+      "precision": 0.933,
+      "recall": 0.7115,
+      "f1": 0.8073,
+      "roc_auc": 0.9749
+    },
+    "card": {
+      "threshold": 0.85,
+      "accuracy": 0.97,
+      "precision": 0.933,
+      "recall": 0.7115,
+      "f1": 0.8073,
+      "roc_auc": 0.9749,
+      "confusion_matrix": {
+        "tn": 13085,
+        "fp": 65,
+        "fn": 367,
+        "tp": 905
+      }
+    },
+    "matches_card": true,
+    "n_test": 14422,
+    "threshold": 0.85,
+    "version": "diabetes_dl_v1"
+  },
+  "dataset": {
+    "rows_raw": 100000,
+    "rows_after_dedup": 96146,
+    "duplicates_removed": 3854,
+    "positive_rate": 0.0882
+  },
+  "ablation": {
+    "dl_only": {
+      "tp": 905,
+      "fp": 65,
+      "tn": 13085,
+      "fn": 367,
+      "accuracy": 0.97,
+      "precision": 0.933,
+      "recall": 0.7115,
+      "f1": 0.8073
+    },
+    "dl_plus_rule": {
+      "tp": 1031,
+      "fp": 3153,
+      "tn": 9997,
+      "fn": 241,
+      "accuracy": 0.7647,
+      "precision": 0.2464,
+      "recall": 0.8105,
+      "f1": 0.3779
+    },
+    "rescued_positives": 126,
+    "extra_alerts_on_negatives": 3088,
+    "delta_recall": 0.099,
+    "review_flags": 3214
+  },
+  "rule_error": null,
+  "cases": {
+    "TP": [
+      {
+        "idx": 10555,
+        "y": 1,
+        "dl": 1,
+        "score": 0.997,
+        "alert": true
+      },
+      {
+        "idx": 1977,
+        "y": 1,
+        "dl": 1,
+        "score": 1.0,
+        "alert": true
+      },
+      {
+        "idx": 425,
+        "y": 1,
+        "dl": 1,
+        "score": 1.0,
+        "alert": true
+      },
+      {
+        "idx": 12234,
+        "y": 1,
+        "dl": 1,
+        "score": 1.0,
+        "alert": true
+      },
+      {
+        "idx": 4579,
+        "y": 1,
+        "dl": 1,
+        "score": 1.0,
+        "alert": true
+      }
+    ],
+    "FN": [
+      {
+        "idx": 4743,
+        "y": 1,
+        "dl": 0,
+        "score": 0.6317,
+        "alert": false
+      },
+      {
+        "idx": 4547,
+        "y": 1,
+        "dl": 0,
+        "score": 0.2877,
+        "alert": true
+      },
+      {
+        "idx": 2791,
+        "y": 1,
+        "dl": 0,
+        "score": 0.4852,
+        "alert": true
+      },
+      {
+        "idx": 2072,
+        "y": 1,
+        "dl": 0,
+        "score": 0.647,
+        "alert": false
+      },
+      {
+        "idx": 13522,
+        "y": 1,
+        "dl": 0,
+        "score": 0.6145,
+        "alert": false
+      }
+    ],
+    "FP": [
+      {
+        "idx": 2130,
+        "y": 0,
+        "dl": 1,
+        "score": 0.8828,
+        "alert": false
+      },
+      {
+        "idx": 12338,
+        "y": 0,
+        "dl": 1,
+        "score": 0.8511,
+        "alert": true
+      },
+      {
+        "idx": 632,
+        "y": 0,
+        "dl": 1,
+        "score": 0.8811,
+        "alert": true
+      },
+      {
+        "idx": 621,
+        "y": 0,
+        "dl": 1,
+        "score": 0.8605,
+        "alert": true
+      },
+      {
+        "idx": 5458,
+        "y": 0,
+        "dl": 1,
+        "score": 0.8963,
+        "alert": true
+      }
+    ],
+    "TN": [
+      {
+        "idx": 4205,
+        "y": 0,
+        "dl": 0,
+        "score": 0.1014,
+        "alert": false
+      },
+      {
+        "idx": 9120,
+        "y": 0,
+        "dl": 0,
+        "score": 0.1973,
+        "alert": true
+      },
+      {
+        "idx": 10863,
+        "y": 0,
+        "dl": 0,
+        "score": 0.0,
+        "alert": false
+      },
+      {
+        "idx": 478,
+        "y": 0,
+        "dl": 0,
+        "score": 0.0,
+        "alert": false
+      },
+      {
+        "idx": 10142,
+        "y": 0,
+        "dl": 0,
+        "score": 0.0,
+        "alert": false
+      }
+    ]
+  },
+  "latency": {
+    "n": 30,
+    "total": {
+      "avg": 186.7,
+      "p50": 154,
+      "p95": 240
+    },
+    "agents": {
+      "data": {
+        "avg": 0.0,
+        "p95": 0
+      },
+      "dl": {
+        "avg": 48.9,
+        "p95": 60
+      },
+      "rule": {
+        "avg": 0.0,
+        "p95": 0
+      },
+      "kg": {
+        "avg": 137.9,
+        "p95": 191
+      },
+      "explain": {
+        "avg": 0.0,
+        "p95": 0
+      }
+    }
+  },
+  "consistency": {
+    "match": 30,
+    "n": 30,
+    "statuses": {
+      "ok": 30
+    }
+  },
+  "kg": {
+    "items": [
+      {
+        "question": "Triệu chứng của tiểu đường là gì?",
+        "n": 9,
+        "sourced": 9
+      },
+      {
+        "question": "Chỉ số HbA1c bao nhiêu thì bị tiền tiểu đường?",
+        "n": 9,
+        "sourced": 9
+      },
+      {
+        "question": "Ngưỡng HbA1c để chẩn đoán tiểu đường",
+        "n": 10,
+        "sourced": 10
+      },
+      {
+        "question": "Những ai dễ bị tiểu đường type 2?",
+        "n": 9,
+        "sourced": 9
+      },
+      {
+        "question": "Tiền tiểu đường là gì và có nguy hiểm không?",
+        "n": 10,
+        "sourced": 10
+      },
+      {
+        "question": "Biến chứng của tiểu đường nguy hiểm không?",
+        "n": 9,
+        "sourced": 9
+      },
+      {
+        "question": "Tôi nên ăn uống và vận động thế nào để phòng bệnh?",
+        "n": 2,
+        "sourced": 2
+      },
+      {
+        "question": "Xét nghiệm đường huyết lúc đói bao nhiêu thì cao?",
+        "n": 4,
+        "sourced": 4
+      },
+      {
+        "question": "Người cao tuổi cần lưu ý gì về biến chứng tiểu đường?",
+        "n": 10,
+        "sourced": 10
+      },
+      {
+        "question": "Tiểu đường thai kỳ có ảnh hưởng gì không?",
+        "n": 10,
+        "sourced": 10
+      }
+    ],
+    "total": 82,
+    "sourced": 82,
+    "share": 1.0
+  }
+}

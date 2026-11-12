@@ -1,0 +1,69 @@
+{
+  "model_version": "diabetes_dl_v1",
+  "created_at": "2026-11-12T20:33:43",
+  "seed": 42,
+  "feature_names": [
+    "gender",
+    "age",
+    "hypertension",
+    "heart_disease",
+    "smoking_history",
+    "bmi",
+    "HbA1c_level",
+    "blood_glucose_level"
+  ],
+  "numeric_features": [
+    "age",
+    "bmi",
+    "HbA1c_level",
+    "blood_glucose_level"
+  ],
+  "binary_features": [
+    "hypertension",
+    "heart_disease"
+  ],
+  "categorical_features": [
+    "gender",
+    "smoking_history"
+  ],
+  "categories": {
+    "gender": [
+      "Female",
+      "Male",
+      "Other"
+    ],
+    "smoking_history": [
+      "No Info",
+      "current",
+      "ever",
+      "former",
+      "never",
+      "not current"
+    ]
+  },
+  "threshold": 0.85,
+  "labels": {
+    "0": "nguy cơ thấp",
+    "1": "nguy cơ cao"
+  },
+  "metrics_test": {
+    "threshold": 0.85,
+    "accuracy": 0.97,
+    "precision": 0.933,
+    "recall": 0.7115,
+    "f1": 0.8073,
+    "roc_auc": 0.9749,
+    "confusion_matrix": {
+      "tn": 13085,
+      "fp": 65,
+      "fn": 367,
+      "tp": 905
+    }
+  },
+  "dataset": {
+    "rows_raw": 100000,
+    "rows_after_dedup": 96146,
+    "duplicates_removed": 3854,
+    "positive_rate": 0.0882
+  }
+}

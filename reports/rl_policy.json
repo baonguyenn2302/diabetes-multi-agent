@@ -1,0 +1,26 @@
+{
+  "0": {
+    "action": [
+      0,
+      2
+    ],
+    "content": "không có nội dung",
+    "follow_up_months": 6
+  },
+  "1": {
+    "action": [
+      2,
+      1
+    ],
+    "content": "nội dung dinh dưỡng",
+    "follow_up_months": 3
+  },
+  "2": {
+    "action": [
+      2,
+      0
+    ],
+    "content": "nội dung dinh dưỡng",
+    "follow_up_months": 1
+  }
+}
