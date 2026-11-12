@@ -70,14 +70,14 @@ Số ca test: 14422 · ngưỡng quyết định: 0.85
 
 ## 4. Độ trễ
 
-Số request đo: 30 · tổng thời gian trung bình 186.7 ms, p50 154 ms, p95 240 ms.
+Số request đo: 30 · tổng thời gian trung bình 181.8 ms, p50 151 ms, p95 228 ms.
 
 | Agent | Trung bình (ms) | p95 (ms) |
 |---|---|---|
 | data | 0.0 | 0 |
-| dl | 48.9 | 60 |
+| dl | 45.1 | 56 |
 | rule | 0.0 | 0 |
-| kg | 137.9 | 191 |
+| kg | 136.8 | 187 |
 | explain | 0.0 | 0 |
 
 Kiểm tra nhất quán: 30/30 ca cho cùng dự đoán khi đi qua toàn bộ Coordinator và khi chạy batch trực tiếp.
