@@ -1,115 +1,141 @@
-"""Giao diện Streamlit: gửi thông tin bệnh nhân tới API và hiển thị báo cáo.
+"""Trang chủ / Cổng điều hướng: Hệ đa agent hỗ trợ quyết định & vấn đáp bệnh tiểu đường.
 
-Chạy (API phải đang chạy ở cổng 8000):
+Chạy:
     streamlit run ui/streamlit_app.py
-Đổi địa chỉ API bằng biến môi trường API_URL nếu cần.
 """
 import os
-import sys
-from pathlib import Path
-
 import requests
 import streamlit as st
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from app.features import ALLOWED_CATEGORIES, VALUE_RANGES  # noqa: E402
-
 API_URL = os.getenv("API_URL", "http://localhost:8000")
-LEVEL_ICON = {"high": "🔴", "medium": "🟠", "low": "🟡", "review": "⚠️"}
 
-st.set_page_config(page_title="Hỗ trợ quyết định tiểu đường", layout="wide")
-st.title("Hỗ trợ quyết định tiểu đường")
-st.warning("Prototype học tập. Kết quả **không phải chẩn đoán xác định** và không thay thế bác sĩ.")
+st.set_page_config(
+    page_title="Diabetes MAS | Hệ Đa Agent Tiểu Đường",
+    layout="wide",
+)
 
+# Custom Light Theme CSS (Hạn chế tối đa icon, phong cách tối giản)
+st.markdown("""
+<style>
+    .main-header {
+        text-align: center;
+        padding: 24px 0 16px 0;
+    }
+    .portal-card {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 24px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-with st.form("patient"):
-    c1, c2 = st.columns(2)
-    with c1:
-        gender = st.selectbox("Giới tính", ALLOWED_CATEGORIES["gender"])
-        age = st.number_input("Tuổi", min_value=int(VALUE_RANGES["age"][0]),
-                              max_value=int(VALUE_RANGES["age"][1]), value=45)
-        bmi = st.number_input("BMI", float(VALUE_RANGES["bmi"][0]), float(VALUE_RANGES["bmi"][1]),
-                              value=25.0, step=0.1)
-        smoking = st.selectbox("Tiền sử hút thuốc", ALLOWED_CATEGORIES["smoking_history"])
-    with c2:
-        hba1c = st.number_input("HbA1c (%)", float(VALUE_RANGES["HbA1c_level"][0]),
-                                float(VALUE_RANGES["HbA1c_level"][1]), value=5.5, step=0.1)
-        glucose = st.number_input("Đường huyết (mg/dL)", float(VALUE_RANGES["blood_glucose_level"][0]),
-                                  float(VALUE_RANGES["blood_glucose_level"][1]), value=100.0, step=1.0)
-        ht = st.checkbox("Có tăng huyết áp")
-        hd = st.checkbox("Có bệnh tim mạch")
-    question = st.text_input("Câu hỏi thêm (tùy chọn)", placeholder="Ví dụ: triệu chứng tiểu đường là gì?")
-    submitted = st.form_submit_button("Phân tích")
+st.markdown("""
+<div class="main-header">
+    <h1 style="color: #0f172a; margin-bottom: 8px;">Hệ Đa Agent Hỗ Trợ Quyết Định & Vấn Đáp Tiểu Đường</h1>
+    <p style="color: #64748b; font-size: 1.1rem; max-width: 800px; margin: 0 auto;">
+        Giải pháp tích hợp Học sâu (Deep Learning), Cơ sở tri thức đồ thị (Neo4j Knowledge Graph) 
+        và Hệ luật lâm sàng (Rule-based) theo khuyến cáo ADA/WHO.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
+st.warning("Tuyên bố trách nhiệm: Đây là hệ thống hỗ trợ học tập và nghiên cứu (ISD - PTIT). "
+           "Mọi kết quả và khuyến nghị không thay thế chẩn đoán hoặc chỉ định điều trị của bác sĩ.")
 
-def show_result(body: dict):
-    status = body.get("status")
-    if status == "ok":
-        st.success("Phân tích hoàn tất.")
-    elif status == "partial":
-        st.warning("Một số bước bị lỗi, kết quả chỉ là một phần. Xem mục Lỗi bên dưới.")
+st.write("")
 
-    if body.get("needs_human_review"):
-        st.error("Có mâu thuẫn giữa mô hình và xét nghiệm: cần chuyên gia y tế xem xét trước khi dùng kết quả.")
+# ------------------------------------------------------------ 2 LỰA CHỌN PHÂN NÁNH CHÍNH
+col1, col2 = st.columns(2, gap="large")
 
-    pred = body.get("prediction")
-    m1, m2 = st.columns(2)
-    m1.metric("Dự đoán của mô hình", pred["label"] if pred else "Không có")
-    m2.metric("Xác suất", f"{pred['score']:.2f}" if pred else "–")
-
-    if body.get("rules"):
-        st.subheader("Cờ luật")
-        for f in body["rules"]["flags"]:
-            st.write(f"{LEVEL_ICON.get(f['level'], '•')} **[{f['id']}]** {f['text']}")
-
-    if body.get("report"):
-        st.subheader("Báo cáo")
-        st.markdown(body["report"])
-
-    with st.expander("Bằng chứng từ KG (có nguồn)"):
-        for e in body.get("evidence", []):
-            st.write(f"- {e.get('text')}  \n  _{e.get('source_title')}_ {e.get('source_url') or ''}")
-
-    with st.expander("Trace các bước xử lý"):
-        st.dataframe(body.get("trace", []))
-
-    if body.get("errors"):
-        with st.expander("Lỗi"):
-            st.json(body["errors"])
-
-
-if submitted:
-    features = dict(gender=gender, age=float(age), hypertension=int(ht), heart_disease=int(hd),
-                    smoking_history=smoking, bmi=float(bmi), HbA1c_level=float(hba1c),
-                    blood_glucose_level=float(glucose))
-    try:
-        r = requests.post(f"{API_URL}/assess", json={"features": features, "question": question or None},
-                          timeout=120)
-    except requests.RequestException as e:
-        st.error(f"Không kết nối được API tại {API_URL}. Kiểm tra đã chạy `uvicorn app.api:app` chưa. ({e})")
-        st.stop()
-
-    try:
-        body = r.json()
-    except ValueError:
-        body = {}
-
-    if r.status_code == 200:
-        show_result(body)
-    elif body.get("status") == "validation_error":
-        st.error("Dữ liệu chưa hợp lệ:")
-        for e in body.get("errors", []):
-            st.write(f"- {e.get('error')}")
-    elif isinstance(body.get("detail"), list):          # lỗi kiểu dữ liệu do FastAPI báo
-        st.error("Dữ liệu gửi lên không đúng định dạng.")
-        st.json(body["detail"])
-    else:
-        st.error(f"Lỗi API ({r.status_code}): {body.get('detail', r.text)}")
-
-with st.sidebar:
-    st.header("Vận hành")
-    if st.button("Xem thống kê"):
+with col1:
+    st.markdown("""
+    <div class="portal-card">
+        <div>
+            <h2 style="color: #0284c7; margin-top: 0;">1. Đánh giá Nguy cơ Cá nhân</h2>
+            <p style="color: #334155; line-height: 1.6;">
+                Dành cho người muốn sàng lọc nguy cơ mắc bệnh tiểu đường dựa trên <b>8 chỉ số sức khỏe định lượng</b>:
+                Tuổi, BMI, HbA1c, Đường huyết, Tăng huyết áp, Tiền sử tim mạch, Hút thuốc.
+            </p>
+            <ul style="color: #475569; line-height: 1.6;">
+                <li>Dự đoán xác suất từ mạng nơ-ron Deep Learning (Keras).</li>
+                <li>Rà soát cờ cảnh báo theo tiêu chuẩn lâm sàng (ADA/WHO).</li>
+                <li>Phát hiện mâu thuẫn cần chuyên gia y tế thẩm định.</li>
+                <li>Giao diện thuần số liệu, không chứa ô nhập câu hỏi thừa.</li>
+            </ul>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("Đi đến Trang Đánh giá nguy cơ", key="btn_to_assess", use_container_width=True):
         try:
-            st.json(requests.get(f"{API_URL}/audit/summary", timeout=10).json())
-        except requests.RequestException as e:
-            st.error(f"Không lấy được thống kê: {e}")
+            st.switch_page("pages/diabetes_risk_assessment.py")
+        except Exception:
+            st.info("Hãy chọn trang 'diabetes risk assessment' trên menu điều hướng bên trái.")
+
+with col2:
+    st.markdown("""
+    <div class="portal-card">
+        <div>
+            <h2 style="color: #0d9488; margin-top: 0;">2. Trợ lý Vấn đáp Y tế (Chatbot)</h2>
+            <p style="color: #334155; line-height: 1.6;">
+                Cửa sổ hội thoại tương tác chuyên sâu dạng Messenger, phục vụ tra cứu mọi thắc mắc về bệnh đái tháo đường:
+                triệu chứng, chẩn đoán, chế độ dinh dưỡng, vận động và phòng ngừa biến chứng.
+            </p>
+            <ul style="color: #475569; line-height: 1.6;">
+                <li>Tra cứu Knowledge Graph Neo4j (52 thực thể, 67 quan hệ).</li>
+                <li>Mọi câu trả lời đều có trích dẫn nguồn y khoa uy tín.</li>
+                <li>Độc lập hoàn toàn, không bị gán ép số liệu mặc định.</li>
+                <li>Hỗ trợ liên kết hồ sơ chỉ khi người dùng chủ động yêu cầu.</li>
+            </ul>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("Đi đến Trang Hỏi đáp y tế", key="btn_to_chat", use_container_width=True):
+        try:
+            st.switch_page("pages/diabetes_chatbot.py")
+        except Exception:
+            st.info("Hãy chọn trang 'diabetes chatbot' trên menu điều hướng bên trái.")
+
+st.divider()
+
+# ------------------------------------------------------------ TỔNG QUAN KIẾN TRÚC ĐA AGENT
+st.subheader("Kiến trúc Hệ Đa Agent (Multi-Agent System)")
+
+a1, a2, a3, a4, a5 = st.columns(5)
+with a1:
+    st.markdown("**1. Data Agent**")
+    st.caption("Kiểm định & chuẩn hóa 8 trường dữ liệu bệnh nhân")
+with a2:
+    st.markdown("**2. DL Agent**")
+    st.caption("Dự đoán xác suất nguy cơ (MLP Keras, AUC 0.975)")
+with a3:
+    st.markdown("**3. Rule Agent**")
+    st.caption("Áp dụng ngưỡng ADA/WHO & kiểm tra mâu thuẫn")
+with a4:
+    st.markdown("**4. KG/RAG Agent**")
+    st.caption("Truy vấn tri thức & bằng chứng có nguồn (Neo4j)")
+with a5:
+    st.markdown("**5. Coordinator**")
+    st.caption("Điều phối linh hoạt theo luồng Đánh giá hoặc Chat")
+
+# ------------------------------------------------------------ SIDEBAR
+with st.sidebar:
+    st.header("Vận hành hệ thống")
+    try:
+        health_res = requests.get(f"{API_URL}/health", timeout=5).json()
+        if health_res.get("status") == "ok":
+            st.success("API Service: Hoạt động bình thường")
+        else:
+            st.warning("API Service: Phản hồi bất thường")
+    except Exception:
+        st.error("API Service: Chưa khởi động (cần chạy `uvicorn app.api:app`)")
+
+    if st.button("Xem thống kê Audit log"):
+        try:
+            st.json(requests.get(f"{API_URL}/audit/summary", timeout=5).json())
+        except Exception as e:
+            st.error(f"Lỗi: {e}")

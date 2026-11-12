@@ -12,8 +12,8 @@ from typing import Optional
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.schemas import PatientRequest
-from app.service import assess
+from app.schemas import PatientRequest, ChatRequest
+from app.service import assess, chat
 
 app = FastAPI(
     title="Diabetes MAS",
@@ -52,3 +52,9 @@ def assess_endpoint(req: PatientRequest, coord=Depends(get_coordinator)):
 def audit_summary(last: Optional[int] = None):
     from app.agents.monitoring_agent import MonitoringAgent
     return MonitoringAgent().summary(last_n=last)
+
+
+@app.post("/chat")
+def chat_endpoint(req: ChatRequest, coord=Depends(get_coordinator)):
+    code, body = chat(coord, req.question, req.context)
+    return JSONResponse(status_code=code, content=body)

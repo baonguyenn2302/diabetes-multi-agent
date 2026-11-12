@@ -33,3 +33,19 @@ class AgentMessage(BaseModel):
 class PatientRequest(BaseModel):
     features: dict[str, Any]
     question: Optional[str] = None
+
+
+class ChatRequest(BaseModel):
+    question: str
+    context: Optional[dict[str, Any]] = None   # Chỉ số bệnh nhân (nếu liên kết từ trang đánh giá)
+    history: Optional[list[dict[str, str]]] = None
+
+
+class ChatResponse(BaseModel):
+    request_id: str
+    status: str = "ok"                          # "ok" | "partial" | "error"
+    answer: str                                 # Câu trả lời hội thoại có cấu trúc
+    evidence: list[dict[str, Any]] = Field(default_factory=list)
+    has_patient_context: bool = False
+    errors: list[dict[str, Any]] = Field(default_factory=list)
+

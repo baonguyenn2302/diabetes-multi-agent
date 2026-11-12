@@ -5,7 +5,7 @@ from app.agents.kg_rag_agent import KGRAGAgent
 from app.agents.rule_agent import RuleBasedAgent
 from app.coordinator import CoordinatorAgent
 from app.schemas import AgentMessage
-from app.service import assess
+from app.service import assess, chat
 from tests.test_coordinator_integration import LOW, build
 from tests.test_kg_rag_agent import fake_runner as kg_runner
 from tests.test_rule_agent import runner as rule_runner
@@ -35,3 +35,16 @@ def test_partial_is_still_200():
 def test_result_is_json_serializable():
     _, res = assess(build(lambda f: 0.95), LOW, "Triệu chứng là gì?")
     json.dumps(res, ensure_ascii=False)
+
+
+def test_chat_service_ok_is_200():
+    code, res = chat(build(lambda f: 0.1), "triệu chứng tiểu đường")
+    assert code == 200 and res["status"] == "ok"
+    assert "answer" in res and res["has_patient_context"] is False
+
+
+def test_chat_service_with_context_is_200():
+    code, res = chat(build(lambda f: 0.1), "chế độ ăn", context={"age": 50, "HbA1c_level": 7.0})
+    assert code == 200 and res["status"] == "ok"
+    assert res["has_patient_context"] is True
+

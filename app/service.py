@@ -11,3 +11,9 @@ def assess(coord, features: Any, question: Optional[str] = None):
     """Trả về (mã HTTP, kết quả). Kết quả partial vẫn là 200 vì đã có một phần đáng tin."""
     res = coord.handle(features, question)
     return STATUS_CODE.get(res.get("status"), 500), res
+
+
+def chat(coord, question: str, context: Optional[dict] = None):
+    """Trả về (mã HTTP, kết quả chat). Chỉ gọi KG Agent."""
+    res = coord.handle_chat(question, context)
+    return STATUS_CODE.get(res.get("status"), 500), res

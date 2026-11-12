@@ -31,6 +31,48 @@ class CoordinatorAgent:
         self._new_id = new_id or (lambda: f"req_{uuid.uuid4().hex[:8]}")
 
     # ------------------------------------------------------------ public
+    def handle_chat(self, question: str, context: Optional[dict] = None) -> dict:
+        """Luồng vấn đáp: chỉ dùng KG/RAG Agent để trả lời câu hỏi về tiểu đường."""
+        rid = self._new_id()
+        trace: list[dict] = []
+        errors: list[dict] = []
+        try:
+            kg = self._call("kg", rid, trace, errors, self.kg.run, rid, question)
+            if kg.status == "ok":
+                from app.agents.kg_rag_agent import format_context
+                answer = format_context(kg.evidence)
+                if context:
+                    ctx_note = "Thông tin bệnh nhân đi kèm: " + ", ".join(
+                        f"{k}={v}" for k, v in context.items())
+                    answer = ctx_note + "\n\n" + answer
+                matched = kg.payload.get("matched_entities", [])
+                intents = kg.payload.get("intents", [])
+                status = "ok"
+            else:
+                answer = kg.error or "Không thể truy xuất tri thức."
+                matched, intents = [], []
+                status = "error"
+            return {
+                "status": status,
+                "answer": answer,
+                "evidence": kg.evidence if kg.status == "ok" else [],
+                "matched_entities": matched,
+                "intents": intents,
+                "errors": errors,
+                "trace": trace,
+            }
+        except Exception as e:
+            errors.append({"agent": self.NAME, "error": f"{type(e).__name__}: {e}"})
+            return {
+                "status": "error",
+                "answer": f"Lỗi hệ thống: {e}",
+                "evidence": [],
+                "matched_entities": [],
+                "intents": [],
+                "errors": errors,
+                "trace": trace,
+            }
+
     def handle(self, raw: Any, question: Optional[str] = None) -> dict:
         rid = self._new_id()                                     # bước 2
         trace: list[dict] = []
@@ -44,6 +86,91 @@ class CoordinatorAgent:
         res["errors"] = errors
         self._audit(rid, trace, res["status"], errors)           # bước 11
         return res
+
+    def handle_chat(self, question: str, context: Optional[dict[str, Any]] = None,
+                    history: Optional[list] = None) -> dict:
+        """Xử lý hội thoại/vấn đáp độc lập: chỉ truy vấn KG/RAG, không chạy mô hình DL."""
+        rid = f"chat_{uuid.uuid4().hex[:8]}"
+        trace: list[dict] = []
+        errors: list[dict] = []
+
+        q = (question or "").strip() or DEFAULT_QUESTION
+        kg = self._call("kg", rid, trace, errors, self.kg.run, rid, q)
+
+        answer = self._compose_chat_answer(q, kg, context)
+        status = "ok" if kg.status == "ok" else "partial"
+
+        res = {
+            "request_id": rid,
+            "status": status,
+            "answer": answer,
+            "evidence": kg.evidence if kg.status == "ok" else [],
+            "has_patient_context": bool(context),
+            "trace": trace,
+            "errors": errors,
+        }
+        self._audit(rid, trace, status, errors)
+        return res
+
+    def _compose_chat_answer(self, question: str, kg_msg: AgentMessage,
+                             context: Optional[dict[str, Any]]) -> str:
+        lines: list[str] = []
+
+        # 1. Ngữ cảnh bệnh nhân (nếu người dùng chủ động liên kết từ trang đánh giá)
+        if context:
+            ctx_items = []
+            if "gender" in context:
+                ctx_items.append(f"Giới tính: {context['gender']}")
+            if "age" in context:
+                ctx_items.append(f"Tuổi: {context['age']}")
+            if "bmi" in context:
+                ctx_items.append(f"BMI: {context['bmi']}")
+            if "HbA1c_level" in context:
+                ctx_items.append(f"HbA1c: {context['HbA1c_level']}%")
+            if "blood_glucose_level" in context:
+                ctx_items.append(f"Đường huyết: {context['blood_glucose_level']} mg/dL")
+            if "risk_label" in context:
+                ctx_items.append(f"Mức nguy cơ dự đoán: {context['risk_label']}")
+            elif "prediction" in context and isinstance(context["prediction"], dict):
+                ctx_items.append(f"Mức nguy cơ: {context['prediction'].get('label', '')}")
+
+            if ctx_items:
+                lines.append(f"> 📋 **Hồ sơ bệnh nhân ghi nhận:** {', '.join(ctx_items)}.\n")
+
+        # 2. Bằng chứng trích xuất từ Knowledge Graph
+        evidence_list = kg_msg.evidence if kg_msg and kg_msg.status == "ok" else []
+        if evidence_list:
+            seen_texts = set()
+            unique_evidence = []
+            for e in evidence_list:
+                t = e.get("text")
+                if t and t not in seen_texts:
+                    seen_texts.add(t)
+                    unique_evidence.append(e)
+
+            lines.append("Dựa trên cơ sở tri thức y khoa chuẩn về bệnh tiểu đường:")
+            for e in unique_evidence[:8]:
+                text = e.get("text")
+                src_title = e.get("source_title") or "Tài liệu y tế"
+                src_url = e.get("source_url")
+                if src_url:
+                    lines.append(f"- **{text}**  \n  ↳ *Nguồn: [{src_title}]({src_url})*")
+                else:
+                    lines.append(f"- **{text}**  \n  ↳ *Nguồn: {src_title}*")
+        else:
+            lines.append(
+                "Cơ sở tri thức chưa có thông tin chi tiết trực tiếp cho câu hỏi này. "
+                "Theo các khuyến cáo chung về bệnh tiểu đường, việc duy trì chế độ dinh dưỡng lành mạnh, "
+                "vận động thể lực hợp lý và kiểm tra đường huyết định kỳ là những yếu tố quan trọng hàng đầu."
+            )
+
+        # 3. Khuyến cáo y khoa
+        lines.append(
+            "\n---\n*Lưu ý: Nội dung trên được truy xuất từ Knowledge Graph (ADA, WHO, Vinmec...) nhằm mục đích hỗ trợ tra cứu học tập. "
+            "Thông tin không thay thế cho chẩn đoán hoặc chỉ định điều trị của bác sĩ chuyên khoa.*"
+        )
+        return "\n".join(lines)
+
 
     # ------------------------------------------------------------ pipeline
     def _pipeline(self, rid, raw, question, trace, errors) -> dict:

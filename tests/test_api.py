@@ -47,8 +47,12 @@ def test_assess_validation_error_is_422_with_errors():
 
 
 def test_assess_wrong_body_type_is_422():
-    r = client.post("/assess", json={"features": "không phải object"})
-    assert r.status_code == 422
+    _with(lambda: build(lambda f: 0.1))
+    try:
+        r = client.post("/assess", json={"features": "không phải object"})
+        assert r.status_code == 422
+    finally:
+        _clear()
 
 
 def test_unavailable_system_returns_503():
@@ -65,3 +69,33 @@ def test_unavailable_system_returns_503():
 def test_audit_summary_endpoint_shape():
     r = client.get("/audit/summary")
     assert r.status_code == 200 and "n_requests" in r.json()
+
+
+def test_chat_endpoint_ok():
+    _with(lambda: build(lambda f: 0.1))
+    try:
+        r = client.post("/chat", json={"question": "triệu chứng tiểu đường"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["status"] == "ok"
+        assert "answer" in body and len(body["answer"]) > 0
+        assert body["has_patient_context"] is False
+    finally:
+        _clear()
+
+
+def test_chat_endpoint_with_context():
+    _with(lambda: build(lambda f: 0.1))
+    try:
+        r = client.post("/chat", json={
+            "question": "tôi có nguy cơ không?",
+            "context": {"age": 55, "HbA1c_level": 7.5, "blood_glucose_level": 180, "risk_label": "nguy cơ cao"}
+        })
+        assert r.status_code == 200
+        body = r.json()
+        assert body["status"] == "ok"
+        assert body["has_patient_context"] is True
+        assert "Hồ sơ bệnh nhân ghi nhận" in body["answer"]
+    finally:
+        _clear()
+

@@ -173,3 +173,25 @@ def test_default_id_format():
     c = CoordinatorAgent(Stub("data", {"features": {}}), Stub("dl"), Stub("rule"), Stub("kg"))
     rid = c.handle(RAW)["request_id"]
     assert rid.startswith("req_") and len(rid) == 12
+
+
+def test_handle_chat_only_invokes_kg():
+    c, a = make()
+    res = c.handle_chat("tiểu đường tuýp 2")
+    assert ORDER == ["kg"]
+    assert res["status"] == "ok"
+    assert res["request_id"].startswith("chat_")
+    assert res["has_patient_context"] is False
+    assert "bằng chứng" in res["answer"]
+
+
+def test_handle_chat_with_patient_context():
+    c, a = make()
+    ctx = {"age": 50, "HbA1c_level": 7.0, "risk_label": "nguy cơ cao"}
+    res = c.handle_chat("chế độ ăn", context=ctx)
+    assert ORDER == ["kg"]
+    assert res["status"] == "ok"
+    assert res["has_patient_context"] is True
+    assert "Hồ sơ bệnh nhân ghi nhận" in res["answer"]
+    assert "HbA1c: 7.0%" in res["answer"]
+

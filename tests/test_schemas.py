@@ -1,4 +1,4 @@
-from app.schemas import AgentMessage, PatientRequest
+from app.schemas import AgentMessage, PatientRequest, ChatRequest, ChatResponse
 
 
 def test_ok_message():
@@ -19,3 +19,14 @@ def test_patient_request():
 def test_patient_request_accepts_text_categories():
     r = PatientRequest(features={"gender": "Female", "age": 40})
     assert r.features["gender"] == "Female" and r.features["age"] == 40
+
+
+def test_chat_request_and_response():
+    req = ChatRequest(question="tiểu đường là gì")
+    assert req.question == "tiểu đường là gì"
+    assert req.context is None
+
+    res = ChatResponse(request_id="chat_123", answer="câu trả lời", has_patient_context=False)
+    assert res.status == "ok"
+    assert res.answer == "câu trả lời"
+
